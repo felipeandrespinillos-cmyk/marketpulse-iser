@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MarketPulse ISER | Plataforma de Estudios de Mercado</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js para Dashboard en Tiempo Real -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- html2pdf.js para Informe Ejecutivo en PDF -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <!-- QRious para generación de Códigos QR dinámicos por encuesta -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap');
+    body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+    .tab-active { border-bottom: 3px solid #1e3a8a; color: #1e3a8a; font-weight: 700; }
+    .pdf-container { background: white; padding: 30px; border-radius: 8px; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+  <!-- ========================================================= -->
+  <!-- PANTALLA DE INICIO DE SESIÓN (CONTROL DE ROLES Y CLAVES)  -->
+  <!-- ========================================================= -->
+  <div id="pantallaLogin" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-950 via-blue-900 to-slate-900 p-4">
+    <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden border border-blue-800">
+      <div class="bg-blue-900 p-6 text-center text-white border-b border-blue-800">
+        <div class="w-14 h-14 bg-amber-400 text-blue-950 rounded-2xl flex items-center justify-center mx-auto text-2xl shadow-lg mb-3">
+          <i class="fa-solid fa-chart-pie"></i>
+        </div>
+        <h1 class="text-2xl font-extrabold tracking-wide">MarketPulse ISER</h1>
+        <p class="text-xs text-blue-200 mt-1">Control de Acceso • Feria Empresarial de Proyectos de Aula</p>
+      </div>
+
+      <form onsubmit="iniciarSesion(event)" class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Usuario</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400"><i class="fa-solid fa-user"></i></span>
+            <input type="text" id="loginUsuario" required placeholder="Ingresa tu usuario" class="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-900 focus:outline-none">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Contraseña / PIN</label>
+          <div class="relative">
+            <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400"><i class="fa-solid fa-lock"></i></span>
+            <input type="password" id="loginClave" required placeholder="••••••••" class="w-full border border-gray-300 rounded-lg pl-9 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-900 focus:outline-none">
+          </div>
+        </div>
+
+        <p id="loginError" class="hidden text-xs text-rose-600 font-semibold bg-rose-50 p-2 rounded border border-rose-200 text-center">
+          Usuario o contraseña incorrectos.
+        </p>
+
+        <button type="submit" class="w-full bg-blue-900 hover:bg-blue-800 text-white font-bold py-3 rounded-lg shadow-md transition flex justify-center items-center space-x-2">
+          <i class="fa-solid fa-right-to-bracket"></i>
+          <span>Ingresar al Sistema</span>
+        </button>
+
+        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 text-[11px] text-slate-600 space-y-1">
+          <p class="font-bold text-slate-700 uppercase">Perfiles de Acceso Configurados:</p>
+          <p>• <strong>Administrador (Docente/Líder):</strong> Control total, QR, Dashboard, Cierre y PDF.</p>
+          <p>• <strong>Analista (Stand):</strong> Captura, QR, Dashboard y Creación Express.</p>
+          <p>• <strong>Encuestador (Campo):</strong> Acceso exclusivo a Captura de Encuestas.</p>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- APLICATIVO PRINCIPAL                                      -->
+  <!-- ========================================================= -->
+  <div id="appPrincipal" class="hidden min-h-screen flex flex-col">
+
+    <!-- BARRA DE NAVEGACIÓN SUPERIOR -->
+    <header id="barraHeader" class="bg-blue-900 text-white shadow-lg">
+      <div class="max-w-7xl mx-auto px-4 py-3.5 flex flex-wrap justify-between items-center gap-4">
+        <div class="flex items-center space-x-3">
+          <i class="fa-solid fa-chart-pie text-2xl text-amber-400"></i>
+          <div>
+            <div class="flex items-center space-x-2">
+              <h1 class="text-lg font-bold tracking-wide">MarketPulse ISER</h1>
+              <span id="badgeRolUsuario" class="bg-amber-400 text-blue-950 text-[10px] font-extrabold px-2 py-0.5 rounded uppercase">ROL</span>
+            </div>
+            <p id="infoUsuarioActivo" class="text-xs text-blue-200">Sesión activa</p>
+          </div>
+        </div>
+
+        <!-- SELECTOR GLOBAL DE PROYECTO, ENCUESTA Y BOTÓN QR -->
+        <div id="controlesGlobales" class="flex flex-wrap items-center gap-2.5 bg-blue-800 p-2 rounded-lg border border-blue-700">
+          <div>
+            <label class="block text-[10px] uppercase text-blue-300 font-semibold">1. Empresa / Proyecto</label>
+            <select id="selectProyecto" onchange="filtrarEncuestas()" class="bg-white text-gray-800 text-xs rounded px-2 py-1.5 font-semibold focus:outline-none">
+              <option value="">Cargando proyectos...</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[10px] uppercase text-blue-300 font-semibold">2. Instrumento / Encuesta</label>
+            <select id="selectEncuesta" onchange="cambiarEncuestaActiva()" class="bg-white text-gray-800 text-xs rounded px-2 py-1.5 font-semibold focus:outline-none">
+              <option value="">Seleccione encuesta...</option>
+            </select>
+          </div>
+          <button onclick="abrirModalQR()" id="btnVerQR" title="Generar Código QR para esta encuesta" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-2.5 py-1.5 rounded text-xs transition flex items-center space-x-1 shadow">
+            <i class="fa-solid fa-qrcode"></i><span>QR Encuesta</span>
+          </button>
+          <button onclick="cargarDatosIniciales(true)" title="Sincronizar con Google Sheets" class="bg-amber-500 hover:bg-amber-600 text-blue-950 font-bold px-2.5 py-1.5 rounded text-xs transition">
+            <i class="fa-solid fa-rotate"></i>
+          </button>
+          <button onclick="cerrarSesion()" id="btnSalir" title="Cerrar Sesión" class="bg-rose-600 hover:bg-rose-700 text-white font-bold px-2.5 py-1.5 rounded text-xs transition flex items-center space-x-1">
+            <i class="fa-solid fa-power-off"></i><span>Salir</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- PESTAÑAS DE MÓDULOS -->
+      <div id="barraPestanas" class="bg-white border-b text-gray-600">
+        <div class="max-w-7xl mx-auto px-4 flex space-x-6 overflow-x-auto text-sm">
+          <button onclick="mostrarVista('captura')" id="tab-captura" class="py-3 px-2 tab-active flex items-center space-x-2">
+            <i class="fa-solid fa-clipboard-question"></i><span>1. Captura de Encuesta</span>
+          </button>
+          <button onclick="mostrarVista('dashboard')" id="tab-dashboard" class="py-3 px-2 flex items-center space-x-2 hover:text-blue-900">
+            <i class="fa-solid fa-chart-column"></i><span>2. Dashboard en Tiempo Real</span>
+          </button>
+          <button onclick="mostrarVista('informe')" id="tab-informe" class="py-3 px-2 flex items-center space-x-2 hover:text-blue-900">
+            <i class="fa-solid fa-file-pdf"></i><span>3. Cierre e Informe Ejecutivo</span>
+          </button>
+          <button onclick="mostrarVista('nuevo')" id="tab-nuevo" class="py-3 px-2 flex items-center space-x-2 text-emerald-700 hover:text-emerald-900 font-semibold ml-auto">
+            <i class="fa-solid fa-plus-circle"></i><span>+ Crear Proyecto Express (Stand)</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- BANNER DE ESTADO DE CONEXIÓN -->
+    <div id="statusBanner" class="hidden bg-amber-100 border-b border-amber-300 text-amber-900 px-4 py-2 text-xs text-center font-medium"></div>
+
+    <!-- MODAL CÓDIGO QR POR ENCUESTA -->
+    <div id="modalQR" class="hidden fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center space-y-4 border border-gray-200">
+        <div class="flex justify-between items-center border-b pb-2">
+          <span class="text-xs font-extrabold text-blue-900 uppercase tracking-wider"><i class="fa-solid fa-qrcode mr-1"></i> Acceso Directo Público</span>
+          <button onclick="cerrarModalQR()" class="text-gray-400 hover:text-gray-700 text-lg"><i class="fa-solid fa-times"></i></button>
+        </div>
+
+        <div id="tarjetaDescargaQR" class="bg-gradient-to-b from-blue-50 to-white p-4 rounded-xl border border-blue-100 space-y-2">
+          <span id="qrBadgeSector" class="bg-amber-400 text-blue-950 text-[10px] font-extrabold px-2 py-0.5 rounded uppercase">SECTOR</span>
+          <h3 id="qrNombreEmpresa" class="text-lg font-extrabold text-blue-950 leading-tight">Empresa</h3>
+          <p id="qrTituloEncuesta" class="text-xs text-gray-600 font-medium">Título de la encuesta</p>
+          
+          <div class="bg-white p-3 rounded-xl shadow-inner border border-gray-200 inline-block my-2">
+            <canvas id="canvasQR"></canvas>
+          </div>
+
+          <p class="text-[11px] text-gray-500 font-semibold">Escanea con la cámara de tu celular para participar en el estudio</p>
+          <p class="text-[9px] text-blue-900 font-bold uppercase tracking-widest">MarketPulse ISER • Feria Empresarial</p>
+        </div>
+
+        <div class="flex flex-col space-y-2 pt-1">
+          <button onclick="descargarImagenQR()" class="w-full bg-blue-900 hover:bg-blue-800 text-white font-bold py-2.5 rounded-lg text-xs shadow transition flex items-center justify-center space-x-2">
+            <i class="fa-solid fa-download"></i><span>Descargar Tarjeta QR (PNG)</span>
+          </button>
+          <button onclick="copiarEnlaceEncuesta()" class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-2 rounded-lg text-xs transition flex items-center justify-center space-x-2">
+            <i class="fa-solid fa-copy"></i><span>Copiar Enlace Directo</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-6">
+
+      <!-- VISTA 1: MÓDULO DE CAPTURA (ENCUESTADOR Y PÚBLICO QR) -->
+      <section id="vista-captura" class="max-w-2xl mx-auto">
+        <div class="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200">
+          <div class="bg-gradient-to-r from-blue-900 to-blue-800 p-5 text-white flex flex-wrap justify-between items-center gap-3">
+            <div>
+              <div class="flex items-center space-x-2">
+                <span id="badgeEmpresaCaptura" class="bg-white text-blue-950 text-xs font-extrabold px-2 py-0.5 rounded uppercase">Empresa</span>
+                <span id="badgeSector" class="bg-amber-400 text-blue-950 text-xs font-bold px-2 py-0.5 rounded uppercase">Sector</span>
+              </div>
+              <h2 id="tituloEncuestaActiva" class="text-xl font-bold mt-1.5">Seleccione una encuesta</h2>
+              <p id="objetivoEncuestaActiva" class="text-xs text-blue-200 mt-0.5">Objetivo del estudio de mercado</p>
+            </div>
+            <div class="flex items-center space-x-2">
+              <button type="button" onclick="abrirModalQR()" id="btnQrCard" class="bg-white/15 hover:bg-white/25 text-white border border-white/30 px-2.5 py-1 rounded-lg text-xs font-semibold transition flex items-center space-x-1">
+                <i class="fa-solid fa-qrcode"></i><span>Ver QR</span>
+              </button>
+              <span id="badgeEstadoEncuesta" class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500 text-white">Abierta</span>
+            </div>
+          </div>
+
+          <form id="formCaptura" onsubmit="enviarRespuesta(event)" class="p-6 space-y-5">
+            <div id="bloqueEncuestador">
+              <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Encuestador / Participante</label>
+              <input type="text" id="inputEncuestador" required class="w-full bg-gray-100 border border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-700 font-semibold focus:outline-none">
+            </div>
+
+            <hr class="border-gray-200">
+
+            <div id="contenedorPreguntas" class="space-y-6"></div>
+
+            <button type="submit" id="btnEnviarEncuesta" class="w-full bg-blue-900 hover:bg-blue-800 text-white font-bold py-3 rounded-lg shadow transition flex justify-center items-center space-x-2">
+              <i class="fa-solid fa-paper-plane"></i>
+              <span>Registrar Respuestas</span>
+            </button>
+          </form>
+        </div>
+      </section>
+
+      <!-- VISTA 2: DASHBOARD EN TIEMPO REAL -->
+      <section id="vista-dashboard" class="hidden space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex items-center space-x-4">
+            <div class="bg-blue-100 text-blue-900 p-3 rounded-lg text-xl"><i class="fa-solid fa-users"></i></div>
+            <div>
+              <p class="text-xs text-gray-500 font-semibold uppercase">Muestra Total (Encuestados)</p>
+              <p id="kpiTotalEncuestados" class="text-2xl font-bold text-gray-800">0</p>
+            </div>
+          </div>
+          <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex items-center space-x-4">
+            <div class="bg-emerald-100 text-emerald-800 p-3 rounded-lg text-xl"><i class="fa-solid fa-database"></i></div>
+            <div>
+              <p class="text-xs text-gray-500 font-semibold uppercase">Variables Procesadas</p>
+              <p id="kpiTotalPreguntas" class="text-2xl font-bold text-gray-800">0</p>
+            </div>
+          </div>
+          <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex items-center space-x-4">
+            <div class="bg-purple-100 text-purple-800 p-3 rounded-lg text-xl"><i class="fa-solid fa-bolt"></i></div>
+            <div>
+              <p class="text-xs text-gray-500 font-semibold uppercase">Índice de Viabilidad Preliminar</p>
+              <p id="kpiViabilidad" class="text-xl font-bold text-emerald-600">Calculando...</p>
+            </div>
+          </div>
+          <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-col justify-center space-y-2">
+            <button onclick="actualizarDashboard()" class="w-full bg-blue-50 hover:bg-blue-100 text-blue-900 font-semibold py-1.5 px-3 rounded text-xs transition flex items-center justify-center space-x-1">
+              <i class="fa-solid fa-sync"></i><span>Actualizar Ahora</span>
+            </button>
+            <label class="flex items-center justify-center space-x-2 text-xs text-gray-600 cursor-pointer">
+              <input type="checkbox" id="checkAutoRefresh" onchange="toggleAutoRefresh()" class="rounded text-blue-900">
+              <span>Tiempo Real (Cada 10s)</span>
+            </label>
+          </div>
+        </div>
+
+        <div id="contenedorGraficos" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
+      </section>
+
+      <!-- VISTA 3: CIERRE E INFORME EJECUTIVO -->
+      <section id="vista-informe" class="hidden space-y-6 max-w-4xl mx-auto">
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex flex-wrap justify-between items-center gap-4">
+          <div>
+            <h3 class="font-bold text-gray-800 text-sm">Panel de Control del Estudio</h3>
+            <p class="text-xs text-gray-500">Cierra la captura para consolidar las conclusiones y descargar el reporte oficial en PDF.</p>
+          </div>
+          <div class="flex space-x-3">
+            <button onclick="cerrarEncuestaActual()" id="btnCerrarEncuesta" class="bg-rose-600 hover:bg-rose-700 text-white font-semibold px-4 py-2 rounded-lg text-xs shadow transition flex items-center space-x-2">
+              <i class="fa-solid fa-lock"></i><span>Cerrar Encuesta Definitivamente</span>
+            </button>
+            <button onclick="descargarPDF()" class="bg-blue-900 hover:bg-blue-800 text-white font-semibold px-4 py-2 rounded-lg text-xs shadow transition flex items-center space-x-2">
+              <i class="fa-solid fa-file-export"></i><span>Descargar Informe PDF</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- DOCUMENTO RENDERIZADO PARA PDF -->
+        <div id="documentoInformePDF" class="pdf-container shadow-md border border-gray-200 space-y-6 text-gray-800">
+          <div class="border-b-2 border-blue-900 pb-4 flex justify-between items-start">
+            <div>
+              <p class="text-xs font-bold text-blue-900 uppercase tracking-widest">Instituto Superior de Educación Rural - ISER</p>
+              <p class="text-[11px] text-gray-500">Tecnología en Gestión de Mercadeo | Feria de Emprendimiento de Proyectos de Aula</p>
+              <h2 class="text-2xl font-extrabold text-gray-900 mt-2">INFORME EJECUTIVO DE FACTIBILIDAD DE MERCADO</h2>
+            </div>
+            <div class="text-right text-xs text-gray-500">
+              <p><strong>Fecha de Emisión:</strong> <span id="pdfFecha"></span></p>
+              <p><strong>Código Estudio:</strong> <span id="pdfCodigoEncuesta"></span></p>
+              <p><strong>Estado:</strong> <span id="pdfEstado" class="font-bold text-blue-900"></span></p>
+            </div>
+          </div>
+
+          <div class="bg-gray-50 p-4 rounded-lg border border-gray-200 grid grid-cols-2 gap-4 text-xs">
+            <div>
+              <p class="text-gray-500 uppercase font-semibold">Empresa / Proyecto Evaluado:</p>
+              <p id="pdfNombreEmpresa" class="text-sm font-bold text-blue-900 mt-0.5">-</p>
+            </div>
+            <div>
+              <p class="text-gray-500 uppercase font-semibold">Sector Económico:</p>
+              <p id="pdfSector" class="text-sm font-bold text-gray-800 mt-0.5">-</p>
+            </div>
+            <div class="col-span-2">
+              <p class="text-gray-500 uppercase font-semibold">Instrumento y Objetivo de Investigación:</p>
+              <p id="pdfObjetivo" class="text-xs text-gray-700 mt-0.5">-</p>
+            </div>
+            <div>
+              <p class="text-gray-500 uppercase font-semibold">Tamaño de la Muestra (n):</p>
+              <p id="pdfMuestra" class="text-sm font-bold text-emerald-700 mt-0.5">0 encuestados válidos</p>
+            </div>
+            <div>
+              <p class="text-gray-500 uppercase font-semibold">Dictamen de Viabilidad Comercial:</p>
+              <p id="pdfDictamen" class="text-sm font-extrabold mt-0.5">-</p>
+            </div>
+          </div>
+
+          <div>
+            <h3 class="text-sm font-bold uppercase text-blue-900 border-b pb-1 mb-3">1. Hallazgos Estadísticos por Variable</h3>
+            <div id="pdfDesglosePreguntas" class="space-y-4 text-xs"></div>
+          </div>
+
+          <div>
+            <h3 class="text-sm font-bold uppercase text-blue-900 border-b pb-1 mb-2">2. Análisis del Comportamiento del Consumidor y Recomendaciones</h3>
+            <p id="pdfConclusionesTexto" class="text-xs leading-relaxed text-gray-700 text-justify"></p>
+          </div>
+
+          <div class="pt-6 border-t border-gray-200 flex justify-between text-[10px] text-gray-400">
+            <span>Generado automáticamente por MarketPulse ISER</span>
+            <span>Articulación Académica: Comportamiento del Consumidor • Estadística • Comunicación y Publicidad</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- VISTA 4: CREAR PROYECTO EXPRESS EN EL STAND -->
+      <section id="vista-nuevo" class="hidden max-w-2xl mx-auto">
+        <div class="bg-white rounded-xl shadow-md p-6 border border-gray-200 space-y-4">
+          <div class="border-b pb-3">
+            <h2 class="text-lg font-bold text-emerald-800"><i class="fa-solid fa-rocket mr-2"></i>Creador de Estudios en Vivo (Modo Feria)</h2>
+            <p class="text-xs text-gray-500">Registra la idea de negocio de cualquier visitante del stand en 30 segundos, genera su QR y empieza a encuestar.</p>
+          </div>
+
+          <form id="formNuevoProyecto" onsubmit="guardarProyectoExpress(event)" class="space-y-4 text-sm">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Nombre del Proyecto / Empresa</label>
+                <input type="text" id="newNombreEmpresa" required placeholder="Ej. Café San Juan" class="w-full border rounded px-3 py-2">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Sector Económico</label>
+                <input type="text" id="newSector" required placeholder="Ej. Agroindustria / Alimentos" class="w-full border rounded px-3 py-2">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Título de la Encuesta</label>
+              <input type="text" id="newTituloEncuesta" required placeholder="Ej. Estudio de Aceptación de Café Orgánico" class="w-full border rounded px-3 py-2">
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-gray-700 uppercase mb-1">Objetivo del Estudio</label>
+              <input type="text" id="newObjetivo" required placeholder="Ej. Validar intención de compra y canal de distribución" class="w-full border rounded px-3 py-2">
+            </div>
+
+            <div class="bg-gray-50 p-3 rounded border space-y-3">
+              <p class="text-xs font-bold text-blue-900 uppercase">Preguntas Estándar de Factibilidad (Editables)</p>
+              <div>
+                <label class="text-xs font-semibold text-gray-600">Pregunta 1 (Filtro Sí/No):</label>
+                <input type="text" id="newPreg1" required value="¿Adquiriría usted este producto o servicio para resolver su necesidad actual?" class="w-full border rounded px-2 py-1 text-xs mt-1">
+              </div>
+              <div>
+                <label class="text-xs font-semibold text-gray-600">Pregunta 2 (Selección Múltiple - Opciones separadas por coma):</label>
+                <input type="text" id="newPreg2" required value="¿Qué factor considera más importante al momento de elegirnos?" class="w-full border rounded px-2 py-1 text-xs mt-1 mb-1">
+                <input type="text" id="newOpc2" required value="Precio accesible,Calidad garantizada,Atención personalizada,Rapidez de entrega" class="w-full border bg-white rounded px-2 py-1 text-xs text-gray-500">
+              </div>
+              <div>
+                <label class="text-xs font-semibold text-gray-600">Pregunta 3 (Escala de Intención 1 a 5):</label>
+                <input type="text" id="newPreg3" required value="Del 1 al 5, ¿qué tan dispuesto está a pagar o invertir en esta propuesta?" class="w-full border rounded px-2 py-1 text-xs mt-1">
+              </div>
+            </div>
+
+            <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg shadow transition">
+              Crear Proyecto y Activar Encuesta
+            </button>
+          </form>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- CONFIGURACIÓN DE CONEXIÓN FIJA, ROLES, QR Y LÓGICA        -->
+  <!-- ========================================================= -->
+  <script>
+    // URL DE GOOGLE APPS SCRIPT YA CONFIGURADA Y CONECTADA
+    const API_URL = "https://script.google.com/macros/s/AKfycbzjUG703zrFWdRV5GPboU5Kw35NZfV63N4q9iZIK0WRmvcspUvUMt7JcLIlrXIzchM/exec";
+
+    // DIRECTORIO DE USUARIOS, CLAVES Y ROLES
+    const USUARIOS_SISTEMA = [
+      { user: "admin", pass: "iser2026", nombre: "Docente Líder (Admin)", rol: "ADMIN" },
+      { user: "felipe", pass: "1234", nombre: "Felipe Pinillos", rol: "ADMIN" },
+      { user: "andrea", pass: "1234", nombre: "Andrea Rico", rol: "ADMIN" },
+      { user: "stand", pass: "feria2026", nombre: "Equipo Stand ISER", rol: "ANALISTA" },
+      { user: "encuestador1", pass: "1111", nombre: "Estudiante Encuestador 01", rol: "ENCUESTADOR" },
+      { user: "encuestador2", pass: "2222", nombre: "Estudiante Encuestador 02", rol: "ENCUESTADOR" }
+    ];
+
+    let usuarioActual = null;
+    let modoPublicoQR = false;
+    let qrEncuestaParam = "";
+    let db = { proyectos: [], encuestas: [], preguntas: [], respuestas: [] };
+    let chartsActivos = [];
+    let intervaloRefresh = null;
+
+    window.onload = () => {
+      const params = new URLSearchParams(window.location.search);
+      const encParam = params.get('enc');
+
+      if (encParam) {
+        modoPublicoQR = true;
+        qrEncuestaParam = encParam.trim();
+        activarModoPublicoQR();
+        return;
+      }
+
+      const sesionGuardada = sessionStorage.getItem('marketpulse_user');
+      if (sesionGuardada) {
+        usuarioActual = JSON.parse(sesionGuardada);
+        activarInterfazPorRol();
+      }
+    };
+
+    // --- MODO ACCESO DIRECTO POR CÓDIGO QR (SIN CONTRASEÑA PARA ENCUESTADOS) ---
+    function activarModoPublicoQR() {
+      document.getElementById('pantallaLogin').classList.add('hidden');
+      document.getElementById('appPrincipal').classList.remove('hidden');
+
+      document.getElementById('badgeRolUsuario').textContent = 'ENCUESTA QR';
+      document.getElementById('infoUsuarioActivo').textContent = 'Participación Ciudadana / Estudio de Mercado';
+      document.getElementById('controlesGlobales').classList.add('hidden');
+      document.getElementById('barraPestanas').classList.add('hidden');
+      document.getElementById('btnQrCard').classList.add('hidden');
+
+      const inputEnc = document.getElementById('inputEncuestador');
+      inputEnc.readOnly = false;
+      inputEnc.classList.remove('bg-gray-100');
+      inputEnc.classList.add('bg-white');
+      inputEnc.value = '';
+      inputEnc.placeholder = 'Escribe tu nombre (Opcional) o déjalo como Visitante QR';
+      inputEnc.required = false;
+
+      mostrarVista('captura');
+      cargarDatosIniciales(false);
+    }
+
+    // --- GENERACIÓN DE CÓDIGO QR POR ENCUESTA ---
+    function obtenerUrlDirectaEncuesta() {
+      const idEnc = document.getElementById('selectEncuesta').value;
+      const baseUrl = window.location.href.split('?')[0];
+      return `${baseUrl}?enc=${encodeURIComponent(idEnc)}`;
+    }
+
+    function abrirModalQR() {
+      const idPrj = document.getElementById('selectProyecto').value;
+      const idEnc = document.getElementById('selectEncuesta').value;
+      const prj = db.proyectos.find(p => p.ID_Proyecto === idPrj);
+      const enc = db.encuestas.find(e => e.ID_Encuesta === idEnc);
+
+      if (!enc) {
+        alert("Selecciona primero una empresa y una encuesta.");
+        return;
+      }
+
+      document.getElementById('qrBadgeSector').textContent = prj ? prj.Sector : 'Estudio de Mercado';
+      document.getElementById('qrNombreEmpresa').textContent = prj ? prj.Nombre_Empresa : 'Proyecto';
+      document.getElementById('qrTituloEncuesta').textContent = enc.Titulo_Encuesta;
+
+      const urlDirecta = obtenerUrlDirectaEncuesta();
+      new QRious({
+        element: document.getElementById('canvasQR'),
+        value: urlDirecta,
+        size: 210,
+        level: 'H',
+        foreground: '#1e3a8a',
+        background: '#ffffff'
+      });
+
+      document.getElementById('modalQR').classList.remove('hidden');
+    }
+
+    function cerrarModalQR() {
+      document.getElementById('modalQR').classList.add('hidden');
+    }
+
+    function descargarImagenQR() {
+      const idPrj = document.getElementById('selectProyecto').value;
+      const idEnc = document.getElementById('selectEncuesta').value;
+      const prj = db.proyectos.find(p => p.ID_Proyecto === idPrj);
+      const canvas = document.getElementById('canvasQR');
+
+      const link = document.createElement('a');
+      link.download = `QR_${prj ? prj.Nombre_Empresa : 'Empresa'}_${idEnc}.png`;
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+
+    function copiarEnlaceEncuesta() {
+      const url = obtenerUrlDirectaEncuesta();
+      navigator.clipboard.writeText(url).then(() => {
+        alert("¡Enlace directo de la encuesta copiado al portapapeles!");
+      });
+    }
+
+    // --- GESTIÓN DE AUTENTICACIÓN Y ROLES ---
+    function iniciarSesion(e) {
+      e.preventDefault();
+      const u = document.getElementById('loginUsuario').value.trim().toLowerCase();
+      const p = document.getElementById('loginClave').value.trim();
+      const errorEl = document.getElementById('loginError');
+
+      const encontrado = USUARIOS_SISTEMA.find(item => item.user.toLowerCase() === u && item.pass === p);
+      if (!encontrado) {
+        errorEl.classList.remove('hidden');
+        return;
+      }
+
+      errorEl.classList.add('hidden');
+      usuarioActual = encontrado;
+      sessionStorage.setItem('marketpulse_user', JSON.stringify(encontrado));
+      activarInterfazPorRol();
+    }
+
+    function cerrarSesion() {
+      sessionStorage.removeItem('marketpulse_user');
+      clearInterval(intervaloRefresh);
+      usuarioActual = null;
+      document.getElementById('appPrincipal').classList.add('hidden');
+      document.getElementById('pantallaLogin').classList.remove('hidden');
+      document.getElementById('loginClave').value = '';
+    }
+
+    function activarInterfazPorRol() {
+      document.getElementById('pantallaLogin').classList.add('hidden');
+      document.getElementById('appPrincipal').classList.remove('hidden');
+
+      document.getElementById('badgeRolUsuario').textContent = usuarioActual.rol;
+      document.getElementById('infoUsuarioActivo').textContent = `Usuario: ${usuarioActual.nombre}`;
+      document.getElementById('inputEncuestador').value = `${usuarioActual.nombre} (${usuarioActual.rol})`;
+
+      const tabCaptura = document.getElementById('tab-captura');
+      const tabDashboard = document.getElementById('tab-dashboard');
+      const tabInforme = document.getElementById('tab-informe');
+      const tabNuevo = document.getElementById('tab-nuevo');
+      const btnVerQR = document.getElementById('btnVerQR');
+      const btnQrCard = document.getElementById('btnQrCard');
+
+      [tabCaptura, tabDashboard, tabInforme, tabNuevo, btnVerQR, btnQrCard].forEach(t => t.classList.remove('hidden'));
+
+      if (usuarioActual.rol === 'ENCUESTADOR') {
+        tabDashboard.classList.add('hidden');
+        tabInforme.classList.add('hidden');
+        tabNuevo.classList.add('hidden');
+      } else if (usuarioActual.rol === 'ANALISTA') {
+        tabInforme.classList.add('hidden');
+      }
+
+      mostrarVista('captura');
+      cargarDatosIniciales(false);
+    }
+
+    // --- SINCRONIZACIÓN AUTOMÁTICA CON GOOGLE SHEETS ---
+    async function cargarDatosIniciales(preservarSeleccion = true) {
+      const banner = document.getElementById('statusBanner');
+      const prevPrj = preservarSeleccion ? document.getElementById('selectProyecto').value : '';
+      const prevEnc = preservarSeleccion ? document.getElementById('selectEncuesta').value : '';
+
+      try {
+        banner.classList.remove('hidden');
+        banner.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i> Sincronizando con Google Sheets en tiempo real...`;
+        const res = await fetch(`${API_URL}?action=getInitData&t=${Date.now()}`);
+        const data = await res.json();
+        if (data.status === 'success') {
+          banner.classList.add('hidden');
+          db.proyectos = data.proyectos || [];
+          db.encuestas = data.encuestas || [];
+          db.preguntas = data.preguntas || [];
+
+          if (modoPublicoQR && qrEncuestaParam) {
+            const encObjetivo = db.encuestas.find(e => e.ID_Encuesta === qrEncuestaParam);
+            if (encObjetivo) {
+              poblarSelectProyectos(encObjetivo.ID_Proyecto, encObjetivo.ID_Encuesta);
+            } else {
+              banner.classList.remove('hidden');
+              banner.innerHTML = `La encuesta solicitada (${qrEncuestaParam}) no se encontró en la base de datos.`;
+            }
+          } else {
+            poblarSelectProyectos(prevPrj, prevEnc);
+          }
+        } else {
+          throw new Error(data.message || 'Error en respuesta');
+        }
+      } catch (err) {
+        console.error(err);
+        banner.classList.remove('hidden');
+        banner.innerHTML = `<i class="fa-solid fa-circle-xmark mr-1 text-rose-700"></i> <strong>Error de conexión con Google Sheets:</strong> Verifica que la implementación de Apps Script tenga acceso para "Cualquier persona".`;
+      }
+    }
+
+    function poblarSelectProyectos(prevPrj = '', prevEnc = '') {
+      const selPrj = document.getElementById('selectProyecto');
+      selPrj.innerHTML = '';
+      db.proyectos.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.ID_Proyecto;
+        opt.textContent = `${p.Nombre_Empresa} (${p.Sector})`;
+        selPrj.appendChild(opt);
+      });
+      if (prevPrj && db.proyectos.some(p => p.ID_Proyecto === prevPrj)) {
+        selPrj.value = prevPrj;
+      }
+      filtrarEncuestas(prevEnc);
+    }
+
+    function filtrarEncuestas(prevEnc = '') {
+      const idPrj = document.getElementById('selectProyecto').value;
+      const selEnc = document.getElementById('selectEncuesta');
+      selEnc.innerHTML = '';
+      const encFiltradas = db.encuestas.filter(e => e.ID_Proyecto === idPrj);
+      encFiltradas.forEach(e => {
+        const opt = document.createElement('option');
+        opt.value = e.ID_Encuesta;
+        opt.textContent = `${e.Titulo_Encuesta} [${e.Estado}]`;
+        selEnc.appendChild(opt);
+      });
+      if (prevEnc && encFiltradas.some(e => e.ID_Encuesta === prevEnc)) {
+        selEnc.value = prevEnc;
+      }
+      cambiarEncuestaActiva();
+    }
+
+    function cambiarEncuestaActiva() {
+      renderizarFormularioCaptura();
+      if (!modoPublicoQR && usuarioActual && usuarioActual.rol !== 'ENCUESTADOR') {
+        actualizarDashboard();
+      }
+    }
+
+    function renderizarFormularioCaptura() {
+      const idPrj = document.getElementById('selectProyecto').value;
+      const idEnc = document.getElementById('selectEncuesta').value;
+      const prj = db.proyectos.find(p => p.ID_Proyecto === idPrj);
+      const enc = db.encuestas.find(e => e.ID_Encuesta === idEnc);
+      const pregs = db.preguntas.filter(p => p.ID_Encuesta === idEnc);
+
+      if (!enc) return;
+
+      document.getElementById('badgeEmpresaCaptura').textContent = prj ? prj.Nombre_Empresa : 'Empresa';
+      document.getElementById('badgeSector').textContent = prj ? prj.Sector : 'General';
+      document.getElementById('tituloEncuestaActiva').textContent = enc.Titulo_Encuesta;
+      document.getElementById('objetivoEncuestaActiva').textContent = enc.Objetivo;
+
+      const badgeEstado = document.getElementById('badgeEstadoEncuesta');
+      const btnEnviar = document.getElementById('btnEnviarEncuesta');
+      if (enc.Estado === 'Cerrada') {
+        badgeEstado.textContent = 'Cerrada';
+        badgeEstado.className = 'px-3 py-1 rounded-full text-xs font-bold bg-rose-600 text-white';
+        btnEnviar.disabled = true;
+        btnEnviar.classList.add('opacity-50', 'cursor-not-allowed');
+      } else {
+        badgeEstado.textContent = 'Abierta';
+        badgeEstado.className = 'px-3 py-1 rounded-full text-xs font-bold bg-emerald-500 text-white';
+        btnEnviar.disabled = false;
+        btnEnviar.classList.remove('opacity-50', 'cursor-not-allowed');
+      }
+
+      const cont = document.getElementById('contenedorPreguntas');
+      cont.innerHTML = '';
+
+      pregs.forEach((p, index) => {
+        const opciones = String(p.Opciones).split(',').map(o => o.trim());
+        const div = document.createElement('div');
+        div.className = 'bg-gray-50 p-4 rounded-lg border border-gray-200';
+        
+        let htmlOpciones = '';
+        if (p.Tipo_Respuesta === 'Escala') {
+          htmlOpciones = `<div class="flex justify-between items-center space-x-2 mt-2">`;
+          opciones.forEach(op => {
+            htmlOpciones += `
+              <label class="flex-1 text-center cursor-pointer">
+                <input type="radio" name="preg_${p.ID_Pregunta}" value="${op}" required class="peer hidden">
+                <div class="py-2 border rounded-lg bg-white peer-checked:bg-blue-900 peer-checked:text-white font-bold text-sm transition hover:bg-blue-50">${op}</div>
+              </label>`;
+          });
+          htmlOpciones += `</div><div class="flex justify-between text-[10px] text-gray-400 mt-1"><span>1 = Mínimo / Nada dispuesto</span><span>5 = Máximo / Totalmente dispuesto</span></div>`;
+        } else {
+          htmlOpciones = `<div class="space-y-2 mt-2">`;
+          opciones.forEach(op => {
+            htmlOpciones += `
+              <label class="flex items-center space-x-3 bg-white p-2.5 rounded-lg border cursor-pointer hover:bg-blue-50 transition">
+                <input type="radio" name="preg_${p.ID_Pregunta}" value="${op}" required class="text-blue-900 focus:ring-blue-500">
+                <span class="text-sm text-gray-800 font-medium">${op}</span>
+              </label>`;
+          });
+          htmlOpciones += `</div>`;
+        }
+
+        div.innerHTML = `
+          <p class="text-sm font-bold text-gray-800"><span class="text-blue-900 mr-1">${index + 1}.</span> ${p.Texto_Pregunta}</p>
+          ${htmlOpciones}
+        `;
+        cont.appendChild(div);
+      });
+    }
+
+    async function enviarRespuesta(e) {
+      e.preventDefault();
+      const idProyecto = document.getElementById('selectProyecto').value;
+      const idEncuesta = document.getElementById('selectEncuesta').value;
+      const rawEncuestador = document.getElementById('inputEncuestador').value.trim();
+      const encuestador = modoPublicoQR
+        ? (rawEncuestador ? `${rawEncuestador} (QR)` : 'Visitante Stand (QR)')
+        : rawEncuestador;
+
+      const pregs = db.preguntas.filter(p => p.ID_Encuesta === idEncuesta);
+
+      const listaRespuestas = pregs.map(p => {
+        const seleccionado = document.querySelector(`input[name="preg_${p.ID_Pregunta}"]:checked`);
+        return {
+          idPregunta: p.ID_Pregunta,
+          valor: seleccionado ? seleccionado.value : ''
+        };
+      });
+
+      const btn = document.getElementById('btnEnviarEncuesta');
+      const textoOriginal = btn.innerHTML;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i><span>Guardando respuestas...</span>`;
+      btn.disabled = true;
+
+      try {
+        await fetch(API_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            action: 'guardarRespuestas',
+            idProyecto,
+            idEncuesta,
+            encuestador,
+            respuestas: listaRespuestas
+          })
+        });
+        alert("¡Muchas gracias! Tus respuestas han sido registradas en tiempo real.");
+        document.getElementById('formCaptura').reset();
+        if (!modoPublicoQR && usuarioActual) {
+          document.getElementById('inputEncuestador').value = `${usuarioActual.nombre} (${usuarioActual.rol})`;
+          if (usuarioActual.rol !== 'ENCUESTADOR') {
+            setTimeout(actualizarDashboard, 1200);
+          }
+        }
+      } catch (err) {
+        alert("Error al enviar respuestas.");
+      } finally {
+        btn.innerHTML = textoOriginal;
+        btn.disabled = false;
+      }
+    }
+
+    async function actualizarDashboard() {
+      const idEncuesta = document.getElementById('selectEncuesta').value;
+      if (!idEncuesta) return;
+
+      try {
+        const res = await fetch(`${API_URL}?action=getResultados&idEncuesta=${idEncuesta}&t=${Date.now()}`);
+        const data = await res.json();
+        if (data.status === 'success') {
+          db.respuestas = data.respuestas || [];
+        }
+      } catch (e) {
+        console.error("Error leyendo resultados:", e);
+      }
+
+      const pregs = db.preguntas.filter(p => p.ID_Encuesta === idEncuesta);
+      const resEncuesta = db.respuestas.filter(r => r.ID_Encuesta === idEncuesta);
+      
+      const totalPersonas = pregs.length > 0 ? Math.floor(resEncuesta.length / pregs.length) : 0;
+      document.getElementById('kpiTotalEncuestados').textContent = totalPersonas;
+      document.getElementById('kpiTotalPreguntas').textContent = pregs.length;
+
+      chartsActivos.forEach(c => c.destroy());
+      chartsActivos = [];
+      const contGraficos = document.getElementById('contenedorGraficos');
+      contGraficos.innerHTML = '';
+
+      let sumaFavorabilidad = 0;
+      let totalPreguntasEvaluadas = 0;
+      let resumenEjecutivoHTML = '';
+      let hallazgosTexto = [];
+
+      pregs.forEach((p, idx) => {
+        const opciones = String(p.Opciones).split(',').map(o => o.trim());
+        const conteo = {};
+        opciones.forEach(o => conteo[o] = 0);
+
+        const respPreg = resEncuesta.filter(r => r.ID_Pregunta === p.ID_Pregunta);
+        respPreg.forEach(r => {
+          const val = String(r.Respuesta_Capturada).trim();
+          if (conteo[val] !== undefined) conteo[val]++;
+          else conteo[val] = 1;
+        });
+
+        const card = document.createElement('div');
+        card.className = 'bg-white p-5 rounded-xl shadow-sm border border-gray-200';
+        card.innerHTML = `
+          <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-blue-50 text-blue-900">${p.Tipo_Respuesta}</span>
+          <h4 class="text-sm font-bold text-gray-800 mt-1 mb-3">${idx + 1}. ${p.Texto_Pregunta}</h4>
+          <div class="h-56 flex items-center justify-center">
+            <canvas id="chart_${p.ID_Pregunta}"></canvas>
+          </div>
+        `;
+        contGraficos.appendChild(card);
+
+        const ctx = document.getElementById(`chart_${p.ID_Pregunta}`).getContext('2d');
+        const labels = Object.keys(conteo);
+        const valores = Object.values(conteo);
+        const tipoChart = (p.Tipo_Respuesta === 'Si_No') ? 'doughnut' : 'bar';
+
+        const nuevoChart = new Chart(ctx, {
+          type: tipoChart,
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Frecuencia de Respuestas',
+              data: valores,
+              backgroundColor: ['#1e3a8a', '#10b981', '#f59e0b', '#6366f1', '#ec4899'],
+              borderRadius: 6
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: tipoChart === 'doughnut', position: 'bottom' } }
+          }
+        });
+        chartsActivos.push(nuevoChart);
+
+        const totalR = respPreg.length || 1;
+        let opcionGanadora = labels[0];
+        let maxVotos = 0;
+        labels.forEach(l => {
+          if (conteo[l] > maxVotos) { maxVotos = conteo[l]; opcionGanadora = l; }
+        });
+        const pctGanador = Math.round((maxVotos / totalR) * 100);
+
+        if (p.Tipo_Respuesta === 'Si_No' && conteo['Sí'] !== undefined) {
+          sumaFavorabilidad += (conteo['Sí'] / totalR) * 100;
+          totalPreguntasEvaluadas++;
+        } else if (p.Tipo_Respuesta === 'Escala') {
+          let sumaEscala = 0;
+          respPreg.forEach(r => sumaEscala += Number(r.Respuesta_Capturada) || 0);
+          const prom = respPreg.length > 0 ? (sumaEscala / respPreg.length) : 0;
+          sumaFavorabilidad += (prom / 5) * 100;
+          totalPreguntasEvaluadas++;
+        }
+
+        let barrasHTML = '';
+        labels.forEach(l => {
+          const cant = conteo[l];
+          const pct = respPreg.length > 0 ? Math.round((cant / respPreg.length) * 100) : 0;
+          barrasHTML += `
+            <div class="mt-1">
+              <div class="flex justify-between text-[11px] font-medium">
+                <span>${l}</span><span>${cant} votos (${pct}%)</span>
+              </div>
+              <div class="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
+                <div class="bg-blue-900 h-2" style="width:${pct}%"></div>
+              </div>
+            </div>`;
+        });
+
+        resumenEjecutivoHTML += `
+          <div class="p-3 bg-white rounded border border-gray-200">
+            <p class="font-bold text-gray-900">${idx + 1}. ${p.Texto_Pregunta}</p>
+            <p class="text-[11px] text-emerald-700 font-semibold mt-0.5">Tendencia dominante: "${opcionGanadora}" con el ${pctGanador}% de preferencia.</p>
+            <div class="mt-2 space-y-1">${barrasHTML}</div>
+          </div>`;
+
+        hallazgosTexto.push(`En la variable "${p.Texto_Pregunta}", la tendencia predominante del consumidor se inclinó hacia "${opcionGanadora}" representando el ${pctGanador}% de la muestra consultada`);
+      });
+
+      const viabilidadFinal = totalPreguntasEvaluadas > 0 ? Math.round(sumaFavorabilidad / totalPreguntasEvaluadas) : 75;
+      const elKpiViab = document.getElementById('kpiViabilidad');
+      const elPdfDictamen = document.getElementById('pdfDictamen');
+
+      if (totalPersonas === 0) {
+        elKpiViab.textContent = 'Sin datos (0%)';
+        elPdfDictamen.textContent = 'PENDIENTE DE MUESTRA';
+      } else if (viabilidadFinal >= 70) {
+        elKpiViab.textContent = `${viabilidadFinal}% (Alta Viabilidad)`;
+        elKpiViab.className = 'text-xl font-bold text-emerald-600';
+        elPdfDictamen.textContent = `PROYECTO ALTAMENTE VIABLE (${viabilidadFinal}% de Aceptación Positiva)`;
+        elPdfDictamen.className = 'text-sm font-extrabold text-emerald-700 mt-0.5';
+      } else if (viabilidadFinal >= 50) {
+        elKpiViab.textContent = `${viabilidadFinal}% (Viabilidad Media)`;
+        elKpiViab.className = 'text-xl font-bold text-amber-600';
+        elPdfDictamen.textContent = `VIABILIDAD CONDICIONADA (${viabilidadFinal}% - Requiere Ajustes)`;
+        elPdfDictamen.className = 'text-sm font-extrabold text-amber-600 mt-0.5';
+      } else {
+        elKpiViab.textContent = `${viabilidadFinal}% (Riesgo Alto)`;
+        elKpiViab.className = 'text-xl font-bold text-rose-600';
+        elPdfDictamen.textContent = `BAJA VIABILIDAD COMERCIAL (${viabilidadFinal}% de Aceptación)`;
+        elPdfDictamen.className = 'text-sm font-extrabold text-rose-600 mt-0.5';
+      }
+
+      const idPrj = document.getElementById('selectProyecto').value;
+      const prj = db.proyectos.find(p => p.ID_Proyecto === idPrj);
+      const enc = db.encuestas.find(e => e.ID_Encuesta === idEncuesta);
+
+      document.getElementById('pdfFecha').textContent = new Date().toLocaleDateString('es-CO');
+      document.getElementById('pdfCodigoEncuesta').textContent = enc ? enc.ID_Encuesta : '-';
+      document.getElementById('pdfEstado').textContent = enc ? enc.Estado.toUpperCase() : '-';
+      document.getElementById('pdfNombreEmpresa').textContent = prj ? prj.Nombre_Empresa : '-';
+      document.getElementById('pdfSector').textContent = prj ? prj.Sector : '-';
+      document.getElementById('pdfObjetivo').textContent = enc ? `${enc.Titulo_Encuesta} — ${enc.Objetivo}` : '-';
+      document.getElementById('pdfMuestra').textContent = `${totalPersonas} encuestados válidos (${resEncuesta.length} registros procesados)`;
+      document.getElementById('pdfDesglosePreguntas').innerHTML = resumenEjecutivoHTML;
+
+      const conclusionParrafo = totalPersonas === 0
+        ? "Aún no se han registrado encuestas suficientes para emitir un concepto técnico de comportamiento del consumidor."
+        : `De acuerdo con el estudio de mercado aplicado a una muestra de ${totalPersonas} participantes para el proyecto ${prj.Nombre_Empresa} del sector ${prj.Sector}, se evidencian patrones claros de adopción comercial. ${hallazgosTexto.join('. ')}. Con un índice global de favorabilidad del ${viabilidadFinal}%, desde las áreas de Comportamiento del Consumidor, Estadística y Comunicación Publicitaria se concluye que la iniciativa cuenta con respaldo empírico para orientar su estrategia de comunicación, estructurar su oferta de valor enfocada en la preferencia mayoritaria detectada y avanzar hacia su implementación operativa.`;
+      
+      document.getElementById('pdfConclusionesTexto').textContent = conclusionParrafo;
+    }
+
+    async function cerrarEncuestaActual() {
+      if (usuarioActual.rol !== 'ADMIN') {
+        alert("Solo el perfil Administrador puede cerrar encuestas.");
+        return;
+      }
+      const idEncuesta = document.getElementById('selectEncuesta').value;
+      if (!confirm("¿Deseas cerrar definitivamente esta encuesta y consolidar el Informe Ejecutivo final?")) return;
+
+      const enc = db.encuestas.find(e => e.ID_Encuesta === idEncuesta);
+      if (enc) enc.Estado = 'Cerrada';
+
+      await fetch(API_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'cerrarEncuesta', idEncuesta })
+      });
+
+      filtrarEncuestas(idEncuesta);
+      alert("Encuesta cerrada. El Informe Ejecutivo Oficial está listo para descargar en PDF.");
+    }
+
+    function descargarPDF() {
+      const elemento = document.getElementById('documentoInformePDF');
+      const idPrj = document.getElementById('selectProyecto').value;
+      const prj = db.proyectos.find(p => p.ID_Proyecto === idPrj);
+      const nombreArchivo = `Informe_Ejecutivo_${prj ? prj.Nombre_Empresa : 'Estudio'}.pdf`;
+
+      const opt = {
+        margin: 10,
+        filename: nombreArchivo,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+      html2pdf().set(opt).from(elemento).save();
+    }
+
+    async function guardarProyectoExpress(e) {
+      e.preventDefault();
+      const nombreEmpresa = document.getElementById('newNombreEmpresa').value;
+      const sector = document.getElementById('newSector').value;
+      const tituloEncuesta = document.getElementById('newTituloEncuesta').value;
+      const objetivo = document.getElementById('newObjetivo').value;
+
+      const preguntasNuevas = [
+        { texto: document.getElementById('newPreg1').value, tipo: 'Si_No', opciones: 'Sí,No' },
+        { texto: document.getElementById('newPreg2').value, tipo: 'Multiple', opciones: document.getElementById('newOpc2').value },
+        { texto: document.getElementById('newPreg3').value, tipo: 'Escala', opciones: '1,2,3,4,5' }
+      ];
+
+      await fetch(API_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'crearProyectoExpress',
+          nombreEmpresa,
+          sector,
+          tituloEncuesta,
+          objetivo,
+          preguntas: preguntasNuevas
+        })
+      });
+
+      alert(`¡Proyecto "${nombreEmpresa}" guardado en Google Sheets! Sincronizando...`);
+      setTimeout(async () => {
+        await cargarDatosIniciales(false);
+        mostrarVista('captura');
+      }, 1500);
+    }
+
+    function mostrarVista(vista) {
+      ['captura', 'dashboard', 'informe', 'nuevo'].forEach(v => {
+        document.getElementById(`vista-${v}`).classList.add('hidden');
+        document.getElementById(`tab-${v}`).classList.remove('tab-active');
+      });
+      document.getElementById(`vista-${vista}`).classList.remove('hidden');
+      document.getElementById(`tab-${vista}`).classList.add('tab-active');
+      if (vista === 'dashboard' || vista === 'informe') actualizarDashboard();
+    }
+
+    function toggleAutoRefresh() {
+      const activo = document.getElementById('checkAutoRefresh').checked;
+      if (activo) {
+        intervaloRefresh = setInterval(async () => {
+          await cargarDatosIniciales(true);
+          await actualizarDashboard();
+        }, 10000);
+      } else {
+        clearInterval(intervaloRefresh);
+      }
+    }
+  </script>
+</body>
+</html>
